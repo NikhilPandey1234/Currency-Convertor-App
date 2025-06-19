@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currency Converter</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.5s, color 0.5s;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            transition: background-color 0.5s, color 0.5s;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .updates {
+            font-size: 0.85rem;
+            color: #6c757d;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .form-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .dark-mode {
+            background-color: #212529;
+            color: white;
+        }
+        .dark-mode .container {
+            background-color: #343a40;
+            color: white;
+        }
+        .form-label, .form-select, .form-control {
+            color: inherit;
+        }
+        .form-select option {
+            color: black;
+        }
+        #themeToggleIcon {
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Top Row: Language Selector + Theme Toggle -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="language-switcher">
+            <select id="languageSelector" class="form-select d-inline-block w-auto" onchange="changeLanguage()">
+                <option value="en">English</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+                <option value="es">Español</option>
+                <option value="ja">日本語</option>
+                <option value="zh">中文</option>
+                <option value="hi">हिन्दी</option>
+                <option value="ta">தமிழ்</option>
+                <option value="bn">বাংলা</option>
+                <option value="gu">ગુજરાતી</option>
+                <option value="mr">मराठी</option>
+                <option value="te">తెలుగు</option>
+                <option value="kn">ಕನ್ನಡ</option>
+                <option value="ml">മലയാളം</option>
+                <option value="pa">ਪੰਜਾਬੀ</option>
+                <option value="ur">اردو</option>
+            </select>
+        </div>
+
+        <div class="theme-toggle">
+            <i id="themeToggleIcon" class="fa-solid fa-toggle-off fa-2x" onclick="toggleTheme()"></i>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1 class="display-4" th:text="#{title}">Currency Converter</h1>
+        <p class="lead">Convert between currencies using real-time exchange rates</p>
+    </div>
+
+    <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
+
+    <!-- Form -->
+    <div class="form-container">
+        <form th:action="@{/convert}" th:object="${conversionRequest}" method="post" class="mb-4">
+            <div class="mb-3">
+                <label for="amount" class="form-label" th:text="#{amount}">Amount</label>
+                <input type="number" step="0.01" min="0.01" id="amount" th:field="*{amount}" class="form-control" required />
+            </div>
+
+            <div class="mb-3">
+                <label for="fromCurrency" class="form-label" th:text="#{fromCurrency}">From Currency</label>
+                <select id="fromCurrency" th:field="*{fromCurrency}" class="form-select" required>
+                    <option th:each="currency : ${currencies}" th:value="${currency}" th:text="${currency}"></option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="toCurrency" class="form-label" th:text="#{toCurrency}">To Currency</label>
+                <select id="toCurrency" th:field="*{toCurrency}" class="form-select" required>
+                    <option th:each="currency : ${currencies}" th:value="${currency}" th:text="${currency}"></option>
+                </select>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg" th:text="#{convert}">Convert</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Update Info -->
+    <div class="updates">
+        <p th:if="${lastUpdate}" th:text="'Last Update: ' + ${lastUpdate}"></p>
+        <p th:if="${nextUpdate}" th:text="'Next Update: ' + ${nextUpdate}"></p>
+    </div>
+
+    <div class="nav-links text-center mt-3">
+        <a th:href="@{/history}" class="btn btn-outline-secondary" th:text="#{conversionHistory}">View Conversion History</a>
+    </div>
+</div>
+
+<!-- JS: Bootstrap Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Custom Scripts -->
+<script>
+    const flagBaseUrl = "https://flagcdn.com/24x18/";
+
+    function currencyToCountryCode(currency) {
+        const map = {
+            USD: 'us', INR: 'in', EUR: 'eu', GBP: 'gb', JPY: 'jp', AUD: 'au',
+            CAD: 'ca', CNY: 'cn', BRL: 'br', CHF: 'ch', SEK: 'se', NZD: 'nz'
+        };
+        return map[currency] || 'xx';
+    }
+
+    function addFlagIconsToDropdown(id) {
+        const select = document.getElementById(id);
+        const options = Array.from(select.options);
+        options.forEach(option => {
+            const currency = option.value;
+            const countryCode = currencyToCountryCode(currency);
+            if (countryCode !== 'xx') {
+                option.textContent = `${getFlagEmoji(countryCode)} ${currency}`;
+            }
+        });
+    }
+
+    function getFlagEmoji(countryCode) {
+        return countryCode.toUpperCase().replace(/./g,
+            char => String.fromCodePoint(127397 + char.charCodeAt())
+        );
+    }
+
+    ['fromCurrency', 'toCurrency'].forEach(addFlagIconsToDropdown);
+
+    function toggleTheme() {
+        const body = document.body;
+        const icon = document.getElementById("themeToggleIcon");
+        body.classList.toggle("dark-mode");
+
+        if (body.classList.contains("dark-mode")) {
+            icon.classList.remove("fa-toggle-off");
+            icon.classList.add("fa-toggle-on");
+            icon.style.color = "limegreen";
+        } else {
+            icon.classList.remove("fa-toggle-on");
+            icon.classList.add("fa-toggle-off");
+            icon.style.color = "black";
+        }
+    }
+
+    function changeLanguage() {
+        const selectedLang = document.getElementById("languageSelector").value;
+        const url = new URL(window.location.href);
+        url.searchParams.set("lang", selectedLang);
+        window.location.href = url.toString();
+    }
+
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentLang = urlParams.get("lang") || "en";
+        document.getElementById("languageSelector").value = currentLang;
+    };
+</script>
+</body>
+</html>
